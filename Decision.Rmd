@@ -5,9 +5,6 @@ has_children: false
 nav_order: 1
 mathjax: true ## Switch to false if this page has no equations or other math rendering.
 ---
-
-# Decision Trees
-
 Decision trees are among the most common and useful machine learning methodologies. While they are a relatively simple method, they are incredibly easy to understand and implement for both classification and regression problems.
 
 A decision tree "grows" by creating a cutoff point (often called a split) at a single point in the data that maximizes accuracy. The tree's prediction is then based on the mean of the region that results from the input data.
@@ -19,7 +16,7 @@ For regression trees, the decision to split along a continuum of values is often
 $$
 minimize \sum(y-prediciton)^2
 $$
-This should be highly reminicent of ordinary least squares. Where this differs is in the number of splits created, the binary nature of the splits, and its nonlinear nature.
+This should be highly reminiscent of ordinary least squares. Where this differs is in the number of splits created, the binary nature of the splits, and its nonlinear nature.
 
 The methodology behind classificiation is very similar, except the splits are decided by minmimzing purity, such as the Gini index:
 
@@ -30,63 +27,80 @@ $$
 The goal here is to create regions with as of classifications as possible, as such, a smaller Gini index implies a more pure region.
 
 ## Keep in Mind
-
+* While decision trees are easy to interpret and understand, they often underpreform relative to other machine learning methodologies. 
+* Even though they may not offer the best predictions, decision trees excel at identifying key variables in the data.
 
 
 ## Also Consider
-
-
-
-# Implementations
-
-```
-titanic <- read.csv("https://www.kaggle.com/c/titanic/data")
-
-```
-
-
-
-Remember that you can use inline math, e.g. $$x + y$$. In general, you should render variables in math mode ($$X$$, $$Y$$, etc.)
-
-You can also render math in display mode:
-
-$$
-\int_a^b f(x)dx
-$$
-
-## Keep in Mind
-
-- LIST OF IMPORTANT THINGS TO REMEMBER ABOUT USING THE TECHNIQUE
-
-## Also Consider
-
-- LIST OF OTHER TECHNIQUES THAT WILL COMMONLY BE USED ALONGSIDE THIS PAGE'S TECHNIQUE
-- (E.G. LINEAR REGRESSION LINKS TO ROBUST STANDARD ERRORS),
-- OR INSTEAD OF THIS TECHNIQUE
-- (E.G. PIE CHART LINKS TO A BAR PLOT AS AN ALTERNATIVE)
-- WITH EXPLANATION
-- INCLUDE LINKS TO OTHER LOST PAGES WITH THE FORMAT [Description](https://lost-stats.github.io/Category/page_name.html). Categories include Data_Manipulation, Geo-Spatial, Machine_Learning, Model_Estimation, Presentation, Summary_Statistics, Time_Series, and Other
+* Decision trees are the basis for all tree-based methodologies. More robust methods, such as random forests, are a collection of decision trees that aggregate their decisions into a single prediction. These forests are often more useful for predictive modeling.
 
 # Implementations
 
-## NAME OF LANGUAGE/SOFTWARE 1
+## R
+```{r}
+# We will utilize data regarding passengers on their survival. We have multiple pieces of information on every passenger, including passenger age, sex, cabin number, and class.
 
-```identifier for language type, see this page: https://github.com/jmm/gfm-lang-ids/wiki/GitHub-Flavored-Markdown-%28GFM%29-language-IDs
-Commented code demonstrating the technique
+# Our goal is to build a decision tree that can predict whether or not passengers survived the wreck.
+
+# Read in the data
+titanic <- read.csv("C:/Users/Evanm/Documents/titanic.csv")
+
+# Set a seed for reproducability
+set.seed(1234)
+
+# The data is clean for the most part, but some variables have been read in as factors instead of numeric variables, so we can fix that with the following code.
+titanic$age <- as.numeric(titanic$age)
+titanic$fare <- as.numeric(titanic$fare)
+
+# As with all machine learning methodologies, we want to create a test and a training dataset
+
+# Take a random sample of the data, here we have chosen to use 75% for training and 25% for validation
+samp_size <- floor(0.75*nrow(titanic))
+train_index <- sample(seq_len(nrow(titanic)),size=samp_size,replace=FALSE)
+
+train <- titanic[train_index, ]
+test <- titanic[-train_index, ]
 ```
 
-## NAME OF LANGUAGE/SOFTWARE 2 WHICH HAS MULTIPLE APPROACHES
+```{r}
+# Now that we have our test and train datasets, we can build our trees. Here, we will use the package "rpart". Other packages, such as "ranger" are also viable options.
 
-There are two ways to perform this technique in language/software 2.
+# install.packages("rpart") ## already installed
+# install.packages("rpart.plot") ## already loaded
+# install.packages("rattle") ## already loaded
+# install.packages("caret") ## already loaded
+library(rpart)
+library(rpart.plot)
+library(rattle)
+library(caret)
 
-First, explanation of what is different about the first way:
+# Here we can pick some variables we think would be good, the tree will decide which ones are best. Some data we have isn't useful, such as an individual's name or the random ID we assigned passengers, so there is no need to include them.
 
-```identifier for language type, see this page: https://github.com/jmm/gfm-lang-ids/wiki/GitHub-Flavored-Markdown-%28GFM%29-language-IDs
-Commented code demonstrating the technique
-```
+basic_tree <- rpart(
+  survived ~ pclass + sex + age + fare + embarked, # our formula
+  data=train,
+  method = "class", # tell the model we are doing classification
+  minsplit=2, # set a minimum number of splits
+  cp=.02 # set an optional penalty rate. It is often useful to try out many different ones
+)
 
-Second, explanation of what is different about the second way:
+basic_tree
 
-```identifier for language type, see this page: https://github.com/jmm/gfm-lang-ids/wiki/GitHub-Flavored-Markdown-%28GFM%29-language-IDs
-Commented code demonstrating the technique
+# plot it using the packages we loaded above
+fancyRpartPlot(basic_tree,caption="Basic Decision Tree")
+
+# This plot gives a very intuitive visual representation on what is going on behind the scenes.
+
+# Now we should predict using the test data we left out!
+predictions <- predict(basic_tree,newdata=test,type="class")
+
+# Make the numeric responses as well as the variables that we are testing on into factors
+predictions <- as.factor(predictions)
+test$survived <- as.factor(test$survived)
+
+# Create a confusion matrix which tells us how well we did.
+confusionMatrix(predictions,test$survived)
+
+# This particular model got ~80% accuracy. This varies each time if you do not set a seed. Much better than a coin toss, but not great. With some additional tuning a decision tree can be much more accurate! Try it for yourself by changing the factors that go into the prediction and the penalty rates.
+
 ```
